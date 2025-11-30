@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,10 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type UserRole = 'client' | 'trainer' | 'landing';
 
@@ -54,9 +58,20 @@ const mockClients = [
 
 export default function Index() {
   const [view, setView] = useState<UserRole>('landing');
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [waterCount, setWaterCount] = useState(mockUserData.waterCurrent);
   const [meals, setMeals] = useState(mockMealPlan);
   const [workouts, setWorkouts] = useState(mockWorkoutPlan);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{text: string, sender: 'client' | 'trainer'}[]>([
+    { text: 'Здравствуйте! Как вы себя чувствуете после вчерашней тренировки?', sender: 'trainer' },
+    { text: 'Отлично! Немного болят мышцы, но это приятная боль 💪', sender: 'client' },
+  ]);
+  const [newMessage, setNewMessage] = useState('');
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [analyzingFood, setAnalyzingFood] = useState(false);
+  const [foodAnalysis, setFoodAnalysis] = useState<{name: string, calories: number, protein: number, carbs: number, fats: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleMeal = (id: number) => {
     setMeals(meals.map(meal => 
@@ -76,6 +91,43 @@ export default function Index() {
     }
   };
 
+  const sendMessage = () => {
+    if (newMessage.trim()) {
+      setChatMessages([...chatMessages, { text: newMessage, sender: 'client' }]);
+      setNewMessage('');
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, { text: 'Спасибо за информацию! Продолжайте в том же духе 👍', sender: 'trainer' }]);
+      }, 1000);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadedImage(event.target?.result as string);
+        setAnalyzingFood(true);
+        setTimeout(() => {
+          setFoodAnalysis({
+            name: 'Куриная грудка с овощами',
+            calories: 380,
+            protein: 42,
+            carbs: 28,
+            fats: 8
+          });
+          setAnalyzingFood(false);
+        }, 2000);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const viewClientProfile = (clientId: number) => {
+    setSelectedClientId(clientId);
+    setView('client');
+  };
+
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -84,7 +136,7 @@ export default function Index() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <Icon name="Activity" className="text-white" size={24} />
             </div>
-            <span className="text-2xl font-heading font-bold gradient-primary bg-clip-text text-transparent">FitLife Pro</span>
+            <span className="text-2xl font-heading font-bold gradient-primary bg-clip-text text-transparent">NutriScan</span>
           </div>
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => setView('client')}>
@@ -101,7 +153,7 @@ export default function Index() {
         <div className="container mx-auto px-4 py-20">
           <div className="text-center max-w-4xl mx-auto mb-16 animate-fade-in">
             <h1 className="text-6xl font-heading font-bold mb-6 gradient-primary bg-clip-text text-transparent">
-              Трансформируй своё здоровье
+              Трансформируй своё здоровье с NutriScan
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
               Умная платформа для фитнес-центров и медицинских клиник. 
@@ -324,7 +376,11 @@ export default function Index() {
             <CardContent>
               <div className="space-y-4">
                 {mockClients.map(client => (
-                  <div key={client.id} className="p-4 border rounded-xl hover:shadow-md transition-all cursor-pointer">
+                  <div 
+                    key={client.id} 
+                    className="p-4 border rounded-xl hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
+                    onClick={() => viewClientProfile(client.id)}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <Avatar>
@@ -337,7 +393,10 @@ export default function Index() {
                           <div className="text-sm text-muted-foreground">{client.goal}</div>
                         </div>
                       </div>
-                      <Badge variant="secondary">{client.lastUpdate}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{client.lastUpdate}</Badge>
+                        <Icon name="ChevronRight" className="text-muted-foreground" size={20} />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
@@ -368,7 +427,7 @@ export default function Index() {
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Icon name="Activity" className="text-white" size={18} />
               </div>
-              <span className="text-xl font-heading font-bold">FitLife Pro</span>
+              <span className="text-xl font-heading font-bold">NutriScan</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -384,14 +443,22 @@ export default function Index() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Avatar className="w-16 h-16">
-              <AvatarFallback className="gradient-primary text-white text-2xl font-bold">АП</AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-heading font-bold">{mockUserData.name}</h1>
-              <p className="text-muted-foreground">Цель: {mockUserData.goal}</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="w-16 h-16">
+                <AvatarFallback className="gradient-primary text-white text-2xl font-bold">АП</AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-3xl font-heading font-bold">{mockUserData.name}</h1>
+                <p className="text-muted-foreground">Цель: {mockUserData.goal}</p>
+              </div>
             </div>
+            {selectedClientId && (
+              <Badge variant="secondary" className="text-sm">
+                <Icon name="Eye" size={14} className="mr-1" />
+                Режим просмотра тренером
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -517,13 +584,75 @@ export default function Index() {
                     <CardTitle>План питания</CardTitle>
                     <CardDescription>Отмечайте выполненные приемы пищи</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <Icon name="Camera" size={16} className="mr-2" />
                     Сфотографировать блюдо
                   </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {uploadedImage && (
+                  <Card className="border-2 border-primary/50 bg-primary/5">
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Icon name="Sparkles" className="text-primary" size={20} />
+                        AI Анализ блюда
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <img src={uploadedImage} alt="Uploaded food" className="w-full h-48 object-cover rounded-lg" />
+                      {analyzingFood ? (
+                        <div className="text-center py-4">
+                          <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+                          <p className="text-sm text-muted-foreground">Анализирую состав блюда...</p>
+                        </div>
+                      ) : foodAnalysis && (
+                        <div className="space-y-3">
+                          <div className="font-semibold text-lg">{foodAnalysis.name}</div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-background rounded-lg">
+                              <div className="text-xs text-muted-foreground mb-1">Калории</div>
+                              <div className="text-xl font-bold gradient-primary bg-clip-text text-transparent">{foodAnalysis.calories} ккал</div>
+                            </div>
+                            <div className="p-3 bg-background rounded-lg">
+                              <div className="text-xs text-muted-foreground mb-1">Белки</div>
+                              <div className="text-xl font-bold text-success">{foodAnalysis.protein}г</div>
+                            </div>
+                            <div className="p-3 bg-background rounded-lg">
+                              <div className="text-xs text-muted-foreground mb-1">Углеводы</div>
+                              <div className="text-xl font-bold text-secondary">{foodAnalysis.carbs}г</div>
+                            </div>
+                            <div className="p-3 bg-background rounded-lg">
+                              <div className="text-xs text-muted-foreground mb-1">Жиры</div>
+                              <div className="text-xl font-bold text-accent">{foodAnalysis.fats}г</div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button className="flex-1 gradient-primary text-white">
+                              <Icon name="Plus" size={16} className="mr-2" />
+                              Добавить в дневник
+                            </Button>
+                            <Button variant="outline" onClick={() => { setUploadedImage(null); setFoodAnalysis(null); }}>
+                              <Icon name="X" size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {meals.map(meal => (
                   <div
                     key={meal.id}
@@ -605,7 +734,7 @@ export default function Index() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Тренер может добавить дополнительные упражнения в ваш план
                   </p>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={() => setChatOpen(true)}>
                     <Icon name="MessageSquare" size={16} className="mr-2" />
                     Написать тренеру
                   </Button>
@@ -615,23 +744,110 @@ export default function Index() {
           </TabsContent>
 
           <TabsContent value="progress" className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Текущий вес</CardTitle>
+                  <CardDescription>Измерено сегодня</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-end gap-2">
+                    <div className="text-6xl font-heading font-bold gradient-primary bg-clip-text text-transparent">
+                      {mockUserData.currentWeight}
+                    </div>
+                    <div className="text-2xl text-muted-foreground mb-2">кг</div>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 text-sm">
+                    <Icon name="TrendingDown" className="text-success" size={16} />
+                    <span className="text-success font-semibold">
+                      -{mockUserData.startWeight - mockUserData.currentWeight} кг за 8 недель
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Прогресс к цели</CardTitle>
+                  <CardDescription>До целевого веса</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium">Выполнено</span>
+                      <span className="text-sm font-semibold">
+                        {Math.round(((mockUserData.startWeight - mockUserData.currentWeight) / (mockUserData.startWeight - mockUserData.targetWeight)) * 100)}%
+                      </span>
+                    </div>
+                    <Progress 
+                      value={((mockUserData.startWeight - mockUserData.currentWeight) / (mockUserData.startWeight - mockUserData.targetWeight)) * 100} 
+                      className="h-3"
+                    />
+                  </div>
+                  <div className="text-center p-4 bg-muted/30 rounded-lg">
+                    <div className="text-sm text-muted-foreground mb-1">Осталось сбросить</div>
+                    <div className="text-3xl font-bold text-accent">
+                      {mockUserData.currentWeight - mockUserData.targetWeight} кг
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
-                <CardTitle>График веса</CardTitle>
-                <CardDescription>Ваш прогресс за последние недели</CardDescription>
+                <CardTitle>Динамика веса</CardTitle>
+                <CardDescription>График изменения веса за последние 8 недель</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-end justify-between gap-2">
-                  {[75, 74, 73, 72, 71, 70, 69, 68].map((weight, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                      <div className="text-sm font-semibold text-muted-foreground">{weight}кг</div>
-                      <div
-                        className="w-full rounded-t-lg gradient-primary"
-                        style={{ height: `${((mockUserData.startWeight - weight) / (mockUserData.startWeight - mockUserData.targetWeight)) * 100}%` }}
-                      />
-                      <div className="text-xs text-muted-foreground">нед {i + 1}</div>
+                <div className="space-y-6">
+                  <div className="relative h-64 border-l-2 border-b-2 border-border rounded-bl-lg p-4">
+                    <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground pl-2">
+                      <span>75 кг</span>
+                      <span>70 кг</span>
+                      <span>65 кг</span>
+                      <span>60 кг</span>
                     </div>
-                  ))}
+                    <svg className="w-full h-full" viewBox="0 0 800 240" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#8B5CF6" />
+                          <stop offset="50%" stopColor="#D946EF" />
+                          <stop offset="100%" stopColor="#F97316" />
+                        </linearGradient>
+                        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.05" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M 50 200 L 150 190 L 250 175 L 350 160 L 450 145 L 550 130 L 650 115 L 750 100"
+                        fill="none"
+                        stroke="url(#gradient)"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M 50 200 L 150 190 L 250 175 L 350 160 L 450 145 L 550 130 L 650 115 L 750 100 L 750 240 L 50 240 Z"
+                        fill="url(#areaGradient)"
+                      />
+                      {[50, 150, 250, 350, 450, 550, 650, 750].map((x, i) => (
+                        <circle
+                          key={i}
+                          cx={x}
+                          cy={200 - i * 15}
+                          r="5"
+                          fill="#8B5CF6"
+                          className="animate-scale-in"
+                        />
+                      ))}
+                    </svg>
+                  </div>
+                  <div className="flex justify-between px-8 text-xs text-muted-foreground">
+                    {['Нед 1', 'Нед 2', 'Нед 3', 'Нед 4', 'Нед 5', 'Нед 6', 'Нед 7', 'Нед 8'].map((week, i) => (
+                      <span key={i}>{week}</span>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -692,6 +908,53 @@ export default function Index() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={chatOpen} onOpenChange={setChatOpen}>
+        <DialogContent className="max-w-2xl max-h-[600px] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icon name="MessageSquare" className="text-primary" size={24} />
+              Чат с тренером
+            </DialogTitle>
+            <DialogDescription>
+              Обсудите ваш прогресс и задайте вопросы
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4 py-4">
+              {chatMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.sender === 'client' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] p-3 rounded-lg ${
+                      msg.sender === 'client'
+                        ? 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <p className="text-sm">{msg.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <div className="flex gap-2 mt-4">
+            <Input
+              placeholder="Введите сообщение..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            />
+            <Button onClick={sendMessage} className="gradient-primary text-white">
+              <Icon name="Send" size={18} />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
